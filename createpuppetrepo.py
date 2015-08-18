@@ -43,8 +43,16 @@ def buildmodule(path,outpath,tag):
 
 #/modules/system/releases/a/acp/acp-profile-0.2.5.tar.gz
 
-	outpath=outpath+"/system/releases/"+metadata['author'][0]+"/"+ metadata['author']+"/"+ metadata['author']+"-"+metadata['name']+"-"+metadata['version']+".tar.gz"
-	fd = open(outpath,"w")
+	outpath=outpath + "/system/releases/" + metadata['author'][0] + "/" + metadata['author']
+	if not os.path.isdir(outpath):
+		print "creating %s"%outpath
+		try:
+			os.makedirs(outpath)
+		except Exception,e:	
+			print "unable to create %s"%outpath
+			sys.exit(1)
+
+	fd = open(outpath+"/"+ metadata['author']+"-"+metadata['name']+"-"+metadata['version']+".tar.gz","w")
 	fd.write(builttgz)
 	fd.close()
 	#git archive --format=tar.gz HEAD | (cd /root/tmp && tar xf -)
