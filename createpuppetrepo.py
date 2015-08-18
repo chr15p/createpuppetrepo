@@ -26,20 +26,31 @@ def getmodules(repopath,outpath,tag):
 	return modules
 
 
-def buildmodule(path,outpath,tag):
-	builttgz = subprocess.check_output(["git","archive","--format=tar.gz",tag,path])
+def buildmodule(path,outpath,tag,isbare=False):
 
-	io_bytes = io.BytesIO(builttgz)
-	tar = tarfile.open(fileobj=io_bytes, mode='r:gz')
-	jsonfd = tar.extractfile(path+"/metadata.json")
+	if isbare:
+		builttgz = subprocess.check_output(["git","archive","--format=tar.gz",tag,path])
+
+		io_bytes = io.BytesIO(builttgz)
+		tar = tarfile.open(fileobj=io_bytes, mode='r:gz')
+		jsonfd = tar.extractfile(path+"/metadata.json")
+		tar.close()
+	else:
+		buildoutput=subprocess.check_output(["puppet","module","build",modulepath])
+		m=re.search("Module built: *(.*)$",buildoutput)
+		if m == None:
+			print "Something went wrong! Build output: %s"%buildoutput
+			sys.exit(1)
+		buildtgz = open(m.group(1),"r").read()	
+		jsonfd = open(path+"/metadata.json","r")		
+	
+	
 	metadata = json.loads(jsonfd.read())
-
 	name = metadata['name'].replace("/","-").rsplit("-",1)
 
 	metadata['name'] = name[1]
 	metadata['author'] = name[0]
 
-	tar.close()
 
 #/modules/system/releases/a/acp/acp-profile-0.2.5.tar.gz
 
@@ -65,6 +76,7 @@ parser = OptionParser()
 parser.add_option("-r", "--repo", action="append", dest="repolist", help='repo containing modules')
 parser.add_option("-o", "--out", default=None, action="store", dest="outputdir", help='directory to write to')
 parser.add_option("-t", "--tag", default="HEAD", action="store", dest="tag", help='tag to build')
+parser.add_option("-b", "--bare", default=False, action="store_true", dest="isbare", help='no working copy in the repo')
 #parser.add_option("-p", "--pull", default=None, action="store", dest="pull", help='if given pull to the given directory before building.')
 
 (opt,args) = parser.parse_args()
@@ -72,6 +84,8 @@ if opt.outputdir:
 	outputpath=opt.outputdir
 else:
 	outputpath="."
+
+isbare=opt.isbare
 
 modulesfilepath=outputpath+"/modules.json"
 
@@ -96,7 +110,7 @@ for reponame in repolist:
 	modlist = getmodules(reponame,outputpath,tag)
 
 	for i in modlist:
-		allmodules.append(buildmodule(i,outputpath,tag))
+		allmodules.append(buildmodule(i,outputpath,tag,isbare))
 		
 
 	#n = r.clone()
