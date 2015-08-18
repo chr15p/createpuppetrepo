@@ -27,14 +27,32 @@ def getmodules(repopath,outpath,tag):
 
 
 def buildmodule(path,outpath,tag,isbare=False):
+	jsonblob = subprocess.check_output(["git","cat-file","blob","%s:%s/metatdata.json"%(tag,path)])
+	metadata = json.loads(jsonblob)
+	name = metadata['name'].replace("/","-").rsplit("-",1)
+
+	metadata['name'] = name[1]
+	metadata['author'] = name[0]
+
+	#/modules/system/releases/a/acp/acp-profile-0.2.5.tar.gz
+	outpath=outpath + "/system/releases/" + metadata['author'][0] + "/" + metadata['author']
+	outfile= outpath+"/"+ metadata['author']+"-"+metadata['name']+"-"+metadata['version']+".tar.gz"
+
+	if os.path.exists(outfile):
+		print "%s already exists not rebuilding"%(outfile)
+
+	print "building %s"%(outpath)
+	if not os.path.isdir(outpath):
+		try:
+			os.makedirs(outpath)
+		except Exception,e:	
+			print "unable to create %s"%outpath
+			sys.exit(1)
+	print "created %s"%outpath
+
 
 	if isbare:
 		builttgz = subprocess.check_output(["git","archive","--format=tar.gz",tag,path])
-
-		io_bytes = io.BytesIO(builttgz)
-		tar = tarfile.open(fileobj=io_bytes, mode='r:gz')
-		jsonfd = tar.extractfile(path+"/metadata.json")
-		tar.close()
 	else:
 		buildoutput=subprocess.check_output(["puppet","module","build",modulepath])
 		m=re.search("Module built: *(.*)$",buildoutput)
@@ -42,32 +60,11 @@ def buildmodule(path,outpath,tag,isbare=False):
 			print "Something went wrong! Build output: %s"%buildoutput
 			sys.exit(1)
 		buildtgz = open(m.group(1),"r").read()	
-		jsonfd = open(path+"/metadata.json","r")		
 	
-	
-	metadata = json.loads(jsonfd.read())
-	name = metadata['name'].replace("/","-").rsplit("-",1)
 
-	metadata['name'] = name[1]
-	metadata['author'] = name[0]
-
-
-#/modules/system/releases/a/acp/acp-profile-0.2.5.tar.gz
-
-	outpath=outpath + "/system/releases/" + metadata['author'][0] + "/" + metadata['author']
-	if not os.path.isdir(outpath):
-		print "creating %s"%outpath
-		try:
-			os.makedirs(outpath)
-		except Exception,e:	
-			print "unable to create %s"%outpath
-			sys.exit(1)
-
-	fd = open(outpath+"/"+ metadata['author']+"-"+metadata['name']+"-"+metadata['version']+".tar.gz","w")
+	fd = open(outfile,"w")
 	fd.write(builttgz)
 	fd.close()
-	#git archive --format=tar.gz HEAD | (cd /root/tmp && tar xf -)
-	# git ls-tree -rt testbranch 
 
 	return metadata
 
