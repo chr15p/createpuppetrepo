@@ -4,7 +4,7 @@ import json
 from optparse import OptionParser
 import os
 import sys
-#import shutil
+import shutil
 import tarfile
 import subprocess
 import re
@@ -48,7 +48,7 @@ def buildmodule(path,outpath,tag,isbare=False):
 		except Exception,e:	
 			print "unable to create %s"%outpath
 			sys.exit(1)
-	print "created %s"%outpath
+	`print "created %s"%outpath
 
 
 	if isbare:
@@ -74,11 +74,18 @@ parser.add_option("-r", "--repo", action="append", dest="repolist", help='repo c
 parser.add_option("-o", "--out", default=None, action="store", dest="outputdir", help='directory to write to')
 parser.add_option("-t", "--tag", default="HEAD", action="store", dest="tag", help='tag to build')
 parser.add_option("-b", "--bare", default=False, action="store_true", dest="isbare", help='no working copy in the repo')
+parser.add_option("-r", "--remove", default=False, action="store_true", dest="reove", help='clear the output directory before commencing build')
 #parser.add_option("-p", "--pull", default=None, action="store", dest="pull", help='if given pull to the given directory before building.')
 
 (opt,args) = parser.parse_args()
 if opt.outputdir:
 	outputpath=opt.outputdir
+	if opt.remove:
+		try:
+			shutils.rmtree(outputpath+"/system")
+		except Exception, e:
+			print "failed to remove directory %s/system : %s"%(outputpath,e)
+			sys.exit(1)
 else:
 	outputpath="."
 
