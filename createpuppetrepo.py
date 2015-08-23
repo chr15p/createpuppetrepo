@@ -74,7 +74,7 @@ parser.add_option("-r", "--repo", action="append", dest="repolist", help='repo c
 parser.add_option("-o", "--out", default=None, action="store", dest="outputdir", help='directory to write to')
 parser.add_option("-t", "--tag", default="HEAD", action="store", dest="tag", help='tag to build')
 parser.add_option("-b", "--bare", default=False, action="store_true", dest="isbare", help='no working copy in the repo')
-parser.add_option("-r", "--remove", default=False, action="store_true", dest="remove", help='clear the output directory before commencing build')
+parser.add_option("-c", "--clean", default=False, action="store_true", dest="remove", help='clean out the output directory before commencing build')
 #parser.add_option("-p", "--pull", default=None, action="store", dest="pull", help='if given pull to the given directory before building.')
 
 (opt,args) = parser.parse_args()
