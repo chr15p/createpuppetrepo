@@ -31,7 +31,7 @@ def getmodules(repopath,outpath,tag):
 
 
 def buildmodule(path,outpath,tag,isbare=False):
-	#print os.getcwd()
+
 	jsonblob = subprocess.check_output(["git","cat-file","blob","%s:%s/metadata.json"%(tag,path)])
 	metadata = json.loads(jsonblob)
 	name = metadata['name'].replace("/","-").rsplit("-",1)
@@ -58,7 +58,11 @@ def buildmodule(path,outpath,tag,isbare=False):
 
 	builttgz=""
 	if isbare:
-		builttgz = subprocess.check_output(["git","archive","--format=tar.gz",tag,path])
+		c=os.getcwd()
+		os.chdir(path)
+		#print ["git","archive","--format=tar.gz","--prefix=%s/"%(metadata['author']+"-"+metadata['name']),tag,"."]
+		builttgz = subprocess.check_output(["git","archive","--format=tar.gz","--prefix=%s/"%(metadata['author']+"-"+metadata['name']),tag,"."])
+		os.chdir(c)
 	else:
 		buildoutput=subprocess.check_output(["puppet","module","build",path])
 		m=re.search("Module built: *(.*)$",buildoutput)
@@ -67,7 +71,6 @@ def buildmodule(path,outpath,tag,isbare=False):
 			sys.exit(1)
 		builttgz = open(m.group(1),"r").read()	
 	
-
 	fd = open(outfile,"w")
 	fd.write(builttgz)
 	fd.close()
