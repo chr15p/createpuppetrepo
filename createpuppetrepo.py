@@ -48,7 +48,7 @@ def buildmodule(path,outpath,tag,isbare=False):
 		except Exception,e:	
 			print "unable to create %s"%outpath
 			sys.exit(1)
-	`print "created %s"%outpath
+	print "created %s"%outpath
 
 
 	if isbare:
