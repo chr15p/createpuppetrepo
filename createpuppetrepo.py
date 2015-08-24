@@ -11,8 +11,23 @@ import re
 import io
 
 
-def getmodules(repopath,outpath,tag):
+def getmodules(repopath,outpath,tag,tmppath):
 	modules=[]
+	print repopath,outpath,tag,tmppath
+	if tmppath:
+		c=os.getcwd()
+		reponame=c.rsplit("/",1)[1]
+		print tmppath+"/"+reponame
+		os.chdir(tmppath)
+		try:
+			if os.path.isdir(tmppath+"/"+ reponame ):
+				shutil.rmtree(tmppath+"/"+ reponame )
+			print ["git","clone",c]
+			subprocess.check_output(["git","clone",c])
+			os.chdir(tmppath+"/"+ reponame)
+		except Exception,e:
+			print "failed to create temp repo for %s: %s"%(repopath,e)
+			sys.exit(1)
 
 	buildoutput=subprocess.check_output(["git","ls-tree","-rt","--full-tree",tag])
 	for line in buildoutput.split("\n"):
@@ -30,7 +45,7 @@ def getmodules(repopath,outpath,tag):
 	return modules
 
 
-def buildmodule(path,outpath,tag,isbare=False):
+def buildmodule(path,outpath,tag):
 
 	jsonblob = subprocess.check_output(["git","cat-file","blob","%s:%s/metadata.json"%(tag,path)])
 	metadata = json.loads(jsonblob)
@@ -56,27 +71,16 @@ def buildmodule(path,outpath,tag,isbare=False):
 			sys.exit(1)
 	print "created %s"%outpath
 
-	builttgz=""
-	if isbare:
-		c=os.getcwd()
-		os.chdir(path)
-		#print ["git","archive","--format=tar.gz","--prefix=%s/"%(metadata['author']+"-"+metadata['name']),tag,"."]
-		builttgz = subprocess.check_output(["git","archive","--format=tar.gz","--prefix=%s/"%(metadata['author']+"-"+metadata['name']),tag,"."])
-		os.chdir(c)
-	else:
-		if not os.path.exists(path):
-			print "%s does not exist. Is this a bare repo?"
-			sys.exit(1)
-		buildoutput=subprocess.check_output(["puppet","module","build",path])
-		m=re.search("Module built: *(.*)$",buildoutput)
-		if m == None:
-			print "Something went wrong! Build output: %s"%buildoutput
-			sys.exit(1)
-		builttgz = open(m.group(1),"r").read()	
-	
-	fd = open(outfile,"w")
-	fd.write(builttgz)
-	fd.close()
+	if not os.path.exists(path):
+		print "%s does not exist. Is this a bare repo?"
+		sys.exit(1)
+	buildoutput=subprocess.check_output(["puppet","module","build",path])
+	m=re.search("Module built: *(.*)$",buildoutput)
+	if m == None:
+		print "Something went wrong! Build output: %s"%buildoutput
+		sys.exit(1)
+
+	shutil.copy2(m.group(1),outfile)
 
 	return metadata
 
@@ -85,7 +89,7 @@ parser = OptionParser()
 parser.add_option("-r", "--repo", action="append", dest="repolist", help='repo containing modules (can be used multiple times)')
 parser.add_option("-o", "--out", default=None, action="store", dest="outputdir", help='directory to write to')
 parser.add_option("-t", "--tag", default="HEAD", action="store", dest="tag", help='tag to build (default: HEAD)')
-parser.add_option("-b", "--bare", default=False, action="store_true", dest="isbare", help='no working copy in the repo')
+parser.add_option("-b", "--tmpdir", action="store", dest="tmpdir", help='use a temporary repo')
 parser.add_option("-c", "--clean", default=False, action="store_true", dest="clean", help='clean out the output directory before commencing build (requires --out)')
 
 cwd=os.getcwd()
@@ -104,7 +108,12 @@ if opt.outputdir:
 else:
 	outputpath=cwd
 
-isbare = opt.isbare
+if opt.tmpdir:
+	tmpdir = opt.tmpdir
+	if tmpdir[0]!="/":
+		 tmpdir=cwd+"/"+ tmpdir
+else:
+	tmpdir=None
 
 modulesfilepath = outputpath+"/modules.json"
 
@@ -127,11 +136,11 @@ for reponame in repolist:
 		sys.exit(1)
 
 	os.chdir(reponame)
-	modlist = getmodules(reponame,outputpath,tag)
+	modlist = getmodules(reponame,outputpath,tag,tmpdir)
 
 	for i in modlist:
-		allmodules.append(buildmodule(i,outputpath,tag,isbare))
-		
+		allmodules.append(buildmodule(i,outputpath,tag))
+
 	os.chdir(cwd)
 
 modjsonfd=open(modulesfilepath,"w")
