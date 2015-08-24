@@ -64,6 +64,9 @@ def buildmodule(path,outpath,tag,isbare=False):
 		builttgz = subprocess.check_output(["git","archive","--format=tar.gz","--prefix=%s/"%(metadata['author']+"-"+metadata['name']),tag,"."])
 		os.chdir(c)
 	else:
+		if not os.path.exists(path):
+			print "%s does not exist. Is this a bare repo?"
+			sys.exit(1)
 		buildoutput=subprocess.check_output(["puppet","module","build",path])
 		m=re.search("Module built: *(.*)$",buildoutput)
 		if m == None:
